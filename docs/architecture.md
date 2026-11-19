@@ -237,12 +237,16 @@ severities against the table in the threat model.
 ```text
 taintmap scan [PATH] [--format terminal|json] [--output FILE] [--min-severity LEVEL]
               [--fail-on low|medium|high|critical|never] [--default-token-permissions write|read]
-              [--include GLOB]... [--exclude GLOB]...
+              [--include GLOB]... [--exclude GLOB]... [--quiet]
 taintmap graph [PATH] --json          # dump the graph for debugging
 taintmap bench [--split dev|test] [--final] [--format terminal|json] [--output FILE]
                                       # run the benchmark (docs/benchmark.md); test needs --final
 taintmap version
 ```
+
+`--quiet` prints only the terminal summary line, including the count of any file problems,
+and suppresses finding details and notes. It also applies to reports written with `--output`.
+It does not change exit codes. Combining `--quiet` with `--format json` is a usage error (exit `2`).
 
 Exit codes: `0` no findings at or above `--fail-on`, `1` findings found, `2` usage or parse error.
 Findings take precedence: a scan with failing findings and a broken file exits `1`, and one with only a

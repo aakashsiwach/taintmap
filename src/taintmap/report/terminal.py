@@ -29,15 +29,22 @@ STYLES = {
 LABEL_WIDTH = 8
 
 
-def render(result: ScanResult, console: Console, min_severity: Severity = Severity.INFO) -> None:
+def render(
+    result: ScanResult,
+    console: Console,
+    min_severity: Severity = Severity.INFO,
+    *,
+    quiet: bool = False,
+) -> None:
     findings = at_least(result.findings, min_severity)
-    for (source_id, agent_id), group in groups(result, findings):
-        console.print(_heading(result, source_id, agent_id, group))
-        console.print()
-        for finding in group:
-            _finding(result, finding, console)
+    if not quiet:
+        for (source_id, agent_id), group in groups(result, findings):
+            console.print(_heading(result, source_id, agent_id, group))
             console.print()
-    _notes(result, console)
+            for finding in group:
+                _finding(result, finding, console)
+                console.print()
+        _notes(result, console)
     console.print(_summary(result, findings, min_severity))
 
 

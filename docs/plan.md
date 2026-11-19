@@ -129,6 +129,7 @@ and JSON round-trip.
 - [x] Findings whose path depends on an `inferred` catalog claim (`attrs.evidence` on a node or edge)
       are shown as "inferred" in both reports.
 - [x] `--include` / `--exclude` globs (repeatable), passed to discovery.
+- [x] `--quiet` for a summary-only terminal report, preserving exit codes and rejecting JSON.
 
 **Acceptance:** end-to-end test running the CLI on a fixture repository; snapshot test of JSON output.
 

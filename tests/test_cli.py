@@ -9,6 +9,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from taintmap.cli import EXIT_ERROR, EXIT_FINDINGS, EXIT_OK, app
@@ -176,6 +177,84 @@ def test_json_report_fields() -> None:
 
 
 # -- options --------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("repo", "options", "expected_code", "expected_summary"),
+    [
+        ("demo", [], EXIT_FINDINGS, "4 findings (2 high, 1 medium, 1 info) in 4 files"),
+        ("notes_only", [], EXIT_OK, "0 findings in 1 file"),
+        ("broken", [], EXIT_ERROR, "0 findings in 1 file; 1 file problem"),
+        (
+            "demo",
+            ["--min-severity", "critical"],
+            EXIT_FINDINGS,
+            "0 findings, 4 below critical not shown in 4 files",
+        ),
+        (
+            "demo",
+            ["--fail-on", "never"],
+            EXIT_OK,
+            "4 findings (2 high, 1 medium, 1 info) in 4 files",
+        ),
+        (
+            "broken",
+            ["--fail-on", "never"],
+            EXIT_ERROR,
+            "0 findings in 1 file; 1 file problem",
+        ),
+    ],
+)
+@pytest.mark.parametrize("terminal", [False, True])
+def test_quiet_prints_only_summary_and_preserves_exit_codes(
+    repo: str,
+    options: list[str],
+    expected_code: int,
+    expected_summary: str,
+    terminal: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("rich.console.Console.is_terminal", property(lambda self: terminal))
+    code, output = scan(str(REPOS / repo), "--quiet", *options)
+    assert code == expected_code
+    assert output == expected_summary + "\n"
+
+
+def test_quiet_output_file(tmp_path: Path) -> None:
+    target = tmp_path / "summary.txt"
+    code, output = scan(str(DEMO), "--quiet", "--output", str(target))
+    assert code == EXIT_FINDINGS
+    assert output == ""
+    assert target.read_text(encoding="utf-8") == (
+        "4 findings (2 high, 1 medium, 1 info) in 4 files\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "render_env",
+    [
+        {"NO_COLOR": "1", "TERM": "dumb", "COLUMNS": "200"},
+        {"NO_COLOR": None, "GITHUB_ACTIONS": "true", "FORCE_COLOR": "1", "COLUMNS": "40"},
+    ],
+)
+def test_quiet_json_conflict_is_a_usage_error_before_scanning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, render_env: dict[str, str | None]
+) -> None:
+    def unexpected_scan(*args: object, **kwargs: object) -> None:
+        pytest.fail("conflicting flags must be rejected before scanning")
+
+    monkeypatch.setattr("taintmap.cli.run_scan", unexpected_scan)
+    target = tmp_path / "report.json"
+    result = runner.invoke(
+        app,
+        ["scan", str(DEMO), "--quiet", "--format", "json", "--output", str(target)],
+        env=render_env,
+        color=True,
+    )
+    assert result.exit_code == EXIT_ERROR
+    message = Text.from_ansi(result.output).plain.translate(str.maketrans({"│": " ", "|": " "}))
+    assert "--quiet cannot be used with --format json" in " ".join(message.split())
+    assert not target.exists()
 
 
 def test_min_severity_filters_the_report_but_not_the_exit_code() -> None:

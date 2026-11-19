@@ -74,6 +74,9 @@ def scan(
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Write the report to this file.")
     ] = None,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", help="Print only the terminal summary line.")
+    ] = False,
     min_severity: Annotated[
         Severity, typer.Option("--min-severity", help="Only report findings at or above this.")
     ] = Severity.INFO,
@@ -101,6 +104,8 @@ def scan(
     ] = None,
 ) -> None:
     """Scan a directory for paths from untrusted input to sensitive actions."""
+    if quiet and output_format is OutputFormat.JSON:
+        raise typer.BadParameter("--quiet cannot be used with --format json")
     try:
         result = run_scan(
             path,
@@ -122,12 +127,14 @@ def scan(
             write_stdout(text)
     elif output:
         buffer = io.StringIO()
-        terminal.render(result, Console(file=buffer, width=120, color_system=None), min_severity)
+        terminal.render(
+            result, Console(file=buffer, width=120, color_system=None), min_severity, quiet=quiet
+        )
         output.write_text(buffer.getvalue(), encoding="utf-8")
     else:
         console = Console(highlight=False, soft_wrap=True)
         if console.is_terminal:
-            terminal.render(result, console, min_severity)
+            terminal.render(result, console, min_severity, quiet=quiet)
         else:
             buffer = io.StringIO()
             terminal.render(
@@ -140,6 +147,7 @@ def scan(
                     soft_wrap=True,
                 ),
                 min_severity,
+                quiet=quiet,
             )
             write_stdout(buffer.getvalue())
 
