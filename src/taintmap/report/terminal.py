@@ -45,7 +45,9 @@ def render(
                 _finding(result, finding, console)
                 console.print()
         _notes(result, console)
-    console.print(_summary(result, findings, min_severity))
+    summary = _summary(result, findings, min_severity)
+    # Quiet output is a machine/test-friendly one-line summary: never emit Rich styles.
+    console.print(summary.plain if quiet else summary)
 
 
 GroupKey = tuple[str, str | None]
