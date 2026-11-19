@@ -132,7 +132,7 @@ def scan(
         )
         output.write_text(buffer.getvalue(), encoding="utf-8")
     else:
-        console = Console(highlight=False, soft_wrap=True)
+        console = Console(highlight=False, soft_wrap=True, no_color=quiet)
         if console.is_terminal:
             terminal.render(result, console, min_severity, quiet=quiet)
         else:
